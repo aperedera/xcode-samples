@@ -2,7 +2,8 @@
 //  bridging.h
 //  callback_void
 //
-//  Created by Anatoli on 11/5/15.
+//  Created by Anatoli on 11/5/2015.
+//  Updated for Swift 3 on 11/14/2016.
 //  Copyright © 2015 Anatoli Peredera. All rights reserved.
 //
 
