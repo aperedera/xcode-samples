@@ -2,7 +2,8 @@
 //  main.swift
 //  callback_void
 //
-//  Created by Anatoli on 11/5/15.
+//  Created by Anatoli on 11/5/2015.
+//  Updated for Swift 3 on 11/14/2016.
 //  Copyright © 2015 Anatoli Peredera. All rights reserved.
 //
 
@@ -24,19 +25,20 @@ struct NaiveStruct
 }
 
 /**
- * Prints an instance of NaiveStruct.  Only selected fields are printed.
+ * Prints an instance of NaiveStruct.
  */
-func printNaive( s : NaiveStruct )
+func printNaive( _ s : NaiveStruct )
 {
     print( "Printing NaiveStruct: " )
+    print( "  m_Int: \(s.m_Int)" )
     print( "  m_Long: \(s.m_Long)" )
     print( "  m_Array: \(s.m_Array.0) \(s.m_Array.1) \(s.m_Array.2) " )
 }
 
 /**
- * This is a naive implementation of the callback.  Casts the void *,
- * provided via an argument of type UnsafeMutablePointer<Void>, to
- * UnsafeMutablePointer<NativeStruct>, takes its memory and naively
+ * This is a naive implementation of the callback.  Uses unsafeBitCast() to
+ * convert the void *, provided via an argument of type UnsafeMutableRawPointer, 
+ * to UnsafeMutablePointer<NativeStruct>, takes its memory and naively
  * creates an instance of NaiveStruct from it.
  *
  * This may or may not work depending on how APIStruct is packed in C
@@ -44,10 +46,15 @@ func printNaive( s : NaiveStruct )
  * NaiveStruct won't match that of the APIStruct provided by the C
  * code via the void *.
  */
-let NaiveCallback : my_cb_t = {( p : UnsafeMutablePointer<Void> )->Void in
+let NaiveCallback : my_cb_t = {( p : UnsafeMutableRawPointer? )->Void in
     print( "In NaiveCallback(), received a void pointer. " )
-    let _ns : NaiveStruct = (UnsafeMutablePointer<NaiveStruct>(p)).memory;
-    printNaive( _ns );
+    if (p != nil)
+    {
+        // Could have used assumingMemoryBound() here.
+        let _ns = unsafeBitCast(p, to: UnsafeMutablePointer<NaiveStruct>.self).pointee
+        printNaive( _ns );
+    }
+    else { print("Naive struct ptr is nil.") }
 }
 
 /**
@@ -59,9 +66,10 @@ CUseCallback( NaiveCallback, 0 )
  * Dumps an instance of the C API's structure, APIStruct, imported via
  * the bridging header.  
  */
-func printAPI( s : APIStruct )
+func printAPI( _ s : APIStruct )
 {
     print( "Printing APIStruct: " )
+    print( "  m_Int: \(s.m_Int)" )
     print( "  m_Long: \(s.m_Long)" )
     print( "  m_Array: \(s.m_Array.0) \(s.m_Array.1) \(s.m_Array.2) " )
 }
@@ -69,7 +77,7 @@ func printAPI( s : APIStruct )
 /**
  * A better callback implementation.
  *
- * This one casts the void pointer to UnsafeMutablePointer<APIStruct>,
+ * This one converts the void pointer to UnsafeMutablePointer<APIStruct>,
  * then uses its memory to construct an instance of APIStruct.  Even if
  * tight packing is used by the C code, the APIStruct will correctly 
  * reflect the data placed there by the C code.  This is as long as 
@@ -80,11 +88,15 @@ func printAPI( s : APIStruct )
  * C code.  This is because we modify a copy of the structure 
  * populated by the C code.
  */
-let OneWayCallback : my_cb_t = {( p : UnsafeMutablePointer<Void> )->Void in
+let OneWayCallback : my_cb_t = {( p : UnsafeMutableRawPointer? )->Void in
     print( "In OneWayCallback(), received a void pointer. " );
-    var _apiS : APIStruct = (UnsafeMutablePointer<APIStruct>(p)).memory
+    // Could have used unsafeBitCast() here
+    guard var _apiS = p?.assumingMemoryBound(to: APIStruct.self).pointee else {
+        print("Could not dereference APIStruct pointer.")
+        return
+    }
     printAPI ( _apiS );
-    print( "Setting m_Long in the structure to 98765432109 " )
+    print( "Setting m_Long in the structure to 98765432109" )
     _apiS.m_Long = 98765432109
 }
 
@@ -118,62 +130,65 @@ struct WrapperStruct
     }
     
     var m_Int : Int32 {
-        get { return m_Pointer.memory.m_Int }
-        set( val ) { m_Pointer.memory.m_Int = val }
+        get { return m_Pointer.pointee.m_Int }
+        set( val ) { m_Pointer.pointee.m_Int = val }
     }
     var m_Long : Int64 {
-        get { return m_Pointer.memory.m_Long }
-        set( val ) { m_Pointer.memory.m_Long = val }
+        get { return m_Pointer.pointee.m_Long }
+        set( val ) { m_Pointer.pointee.m_Long = val }
     }
     var m_Array : (Int16, Int16, Int16)
     {
-        get { return (m_Pointer.memory.m_Array.0,
-                        m_Pointer.memory.m_Array.1,
-            m_Pointer.memory.m_Array.2) }
+        get { return (m_Pointer.pointee.m_Array.0,
+                        m_Pointer.pointee.m_Array.1,
+            m_Pointer.pointee.m_Array.2) }
         set ( val ) {
-            m_Pointer.memory.m_Array.0 = val.0
-            m_Pointer.memory.m_Array.1 = val.1
-            m_Pointer.memory.m_Array.2 = val.2
+            m_Pointer.pointee.m_Array.0 = val.0
+            m_Pointer.pointee.m_Array.1 = val.1
+            m_Pointer.pointee.m_Array.2 = val.2
         }
     }
 }
 
 /**
- * Dumps selected fields from an instance of WrapperStruct.
+ * Dumps an instance of WrapperStruct.
  */
-func printWrapper( s : WrapperStruct )
+func printWrapper( _ s : WrapperStruct )
 {
     print( "Printing APIStruct: " )
+    print( "  m_Int: \(s.m_Int)" )
     print( "  m_Long: \(s.m_Long)" )
     print( "  m_Array: \(s.m_Array.0) \(s.m_Array.1) \(s.m_Array.2) " )
 }
 
 /**
- * A callback implementation that casts the argument to 
+ * A callback implementation that converts the argument to
  * UnsafeMutablePointer<APIStrunct> and wraps that in a WrapperStruct. 
  * Please note that changes made via the WrapperStruct properties
  * are visible to the C code!
  *
  * Notice that here we use a top-level Swift function instead of a closure
- * literal.  Swift 2.1 documentation states that top-level functions can be
- * passed where a function pointer parameter is required.  We could have used
+ * literal. We could have used
  * a literal as well.
  */
-func TwoWayCallback( p : UnsafeMutablePointer<Void> )->Void
+func TwoWayCallback( _ p : UnsafeMutableRawPointer? )->Void
 {
     print( "In TwoWayCallback(), received a void pointer. " );
-    var _wS : WrapperStruct = WrapperStruct(_p: (UnsafeMutablePointer<APIStruct>(p)))
-    printWrapper( _wS )
-    print( "Setting m_Long in the structure to 98765432109 " )
-    _wS.m_Long = 98765432109
-    print( "Setting the array to 111, 222, 333" )
-    _wS.m_Array.0 = 111
-    _wS.m_Array.1 = 222
-    _wS.m_Array.2 = 333
+    if let ptr = p?.assumingMemoryBound(to: APIStruct.self) {
+        var _wS : WrapperStruct = WrapperStruct(_p: ptr)
+        printWrapper( _wS )
+        print( "Setting m_Long in the structure to 98765432109 " )
+        _wS.m_Long = 98765432109
+        print( "Setting the array to 111, 222, 333" )
+        _wS.m_Array.0 = 111
+        _wS.m_Array.1 = 222
+        _wS.m_Array.2 = 333
+    }
+    else { print("APIStruct pointer is nil.") }
 }
 
 print("")
 /**
  * Call C code with our more sophisticated 2-way callback.
  */
-CUseCallback( TwoWayCallback, 1 )
+CUseCallback( TwoWayCallback , 1 )
