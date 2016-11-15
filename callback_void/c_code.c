@@ -2,7 +2,8 @@
 //  c_code.c
 //  callback_void
 //
-//  Created by Anatoli on 11/5/15.
+//  Created by Anatoli on 11/5/2015.
+//  Updated for Swift 3 on 11/14/2016.
 //  Copyright © 2015 Anatoli Peredera. All rights reserved.
 //
 
@@ -13,7 +14,8 @@
  * would include C headers that come with the library.
  */
 // With this pragma here and not available to Swift via the bridging header,
-// the data will not be passed back and forth at all
+// the data will not be passed back and forth at all.  That's unless we use
+// pragma pack(8) here.
 //#pragma pack(1)
 
 #include <stdio.h>
@@ -43,6 +45,7 @@ APIStruct createStruct()
 void printStructInC( APIStruct * x )
 {
     puts( "Printing structure in C" );
+    printf( "  m_Int = %d\n", x->m_Int );
     printf( "  m_Long = %lld\n", x->m_Long );
     printf( "  m_Array = %d %d %d\n", x->m_Array[0], x->m_Array[1], x->m_Array[2] );
 }
@@ -58,6 +61,7 @@ int CUseCallback( my_cb_t cb, int checkOnReturn )
     puts( "Entered C code, printing newly created structure:");
     printStructInC( &x );
     cb( & x );
+//    cb(NULL);
     if (checkOnReturn)
     {
         puts( "Now we are back in C code, see if the callback changed the structure...");
