@@ -8,12 +8,17 @@
 //
 
 /**
- * This is our Swift code that implements the callback required by the C
- * API and invokes the C function, CUseCallback(), to use the callback.
+ * This example demonstrates how to use, in Swift, a C API that takes a void
+ * pointer.  How we write Swift code depends on whether we want to modify the
+ * data pointed to by void* in such a way that the changes are visible in C
+ * code. Data packing used by C code is also important.
+ *
+ * This is our Swift code that implements a callback required by a C
+ * API and invokes a C function, CUseCallback(), to use the callback.
  */
 
 /**
- * This is a naive native Swift structure that tries to mimic the APIStruct
+ * This is a naive native Swift structure that tries to mimic APIStruct
  * from the C API.  Depending on structure packing in C code, this may or
  * may not work.
  */
@@ -42,8 +47,8 @@ func printNaive( _ s : NaiveStruct )
  * creates an instance of NaiveStruct from it.
  *
  * This may or may not work depending on how APIStruct is packed in C
- * code.  If #pragma pack(2) is used in C code, the content of 
- * NaiveStruct won't match that of the APIStruct provided by the C
+ * code.  E.g., if #pragma pack(2) is used in C code, the content of
+ * NaiveStruct won't match that of the APIStruct provided by C
  * code via the void *.
  */
 let NaiveCallback : my_cb_t = {( p : UnsafeMutableRawPointer? )->Void in
@@ -51,7 +56,7 @@ let NaiveCallback : my_cb_t = {( p : UnsafeMutableRawPointer? )->Void in
     if (p != nil)
     {
         // Could have used assumingMemoryBound() here.
-        let _ns = unsafeBitCast(p, to: UnsafeMutablePointer<NaiveStruct>.self).pointee
+        var _ns = unsafeBitCast(p, to: UnsafeMutablePointer<NaiveStruct>.self).pointee
         printNaive( _ns );
     }
     else { print("Naive struct ptr is nil.") }
@@ -98,6 +103,13 @@ let OneWayCallback : my_cb_t = {( p : UnsafeMutableRawPointer? )->Void in
     printAPI ( _apiS );
     print( "Setting m_Long in the structure to 98765432109" )
     _apiS.m_Long = 98765432109
+    // The following change to m_Long would actually be visible in C code; this
+    // is essentially the same approach as used in TwoWayCallback() later.
+    /*
+    if let ptr = p?.assumingMemoryBound(to: APIStruct.self) {
+        ptr.pointee.m_Long = 1111111111111111111
+    }
+    */
 }
 
 print("")
@@ -118,7 +130,7 @@ CUseCallback( OneWayCallback, 1 )
  * code.
  * 
  * In this case the struct mimics the APIStruct, but it doesn't have
- * to.  It could be a Swing class with plenty of added functionality.
+ * to.  It could be a Swift class with plenty of added functionality.
  */
 struct WrapperStruct
 {
@@ -155,7 +167,7 @@ struct WrapperStruct
  */
 func printWrapper( _ s : WrapperStruct )
 {
-    print( "Printing APIStruct: " )
+    print( "Printing WrapperStruct: " )
     print( "  m_Int: \(s.m_Int)" )
     print( "  m_Long: \(s.m_Long)" )
     print( "  m_Array: \(s.m_Array.0) \(s.m_Array.1) \(s.m_Array.2) " )
@@ -163,13 +175,12 @@ func printWrapper( _ s : WrapperStruct )
 
 /**
  * A callback implementation that converts the argument to
- * UnsafeMutablePointer<APIStrunct> and wraps that in a WrapperStruct. 
+ * UnsafeMutablePointer<APIStrunct> and wraps it in a WrapperStruct.
  * Please note that changes made via the WrapperStruct properties
  * are visible to the C code!
  *
  * Notice that here we use a top-level Swift function instead of a closure
- * literal. We could have used
- * a literal as well.
+ * literal. We could have used a literal.
  */
 func TwoWayCallback( _ p : UnsafeMutableRawPointer? )->Void
 {

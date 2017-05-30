@@ -13,10 +13,10 @@
  * even have access to this source code.  However, our bridging header
  * would include C headers that come with the library.
  */
-// With this pragma here and not available to Swift via the bridging header,
+// If his pragma is here and not available to Swift via the bridging header,
 // the data will not be passed back and forth at all.  That's unless we use
 // pragma pack(8) here.
-//#pragma pack(1)
+//#pragma pack(2)
 
 #include <stdio.h>
 #include "bridging.h"
@@ -60,8 +60,7 @@ int CUseCallback( my_cb_t cb, int checkOnReturn )
     APIStruct x = createStruct();
     puts( "Entered C code, printing newly created structure:");
     printStructInC( &x );
-    cb( & x );
-//    cb(NULL);
+    cb( &x );
     if (checkOnReturn)
     {
         puts( "Now we are back in C code, see if the callback changed the structure...");

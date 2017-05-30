@@ -8,8 +8,7 @@
 //
 
 /**
- * Bridging header.  C stuff found here is imported by Swift for use in 
- * Swift code.
+ * Bridging header.  C stuff found here is imported by Swift.
  *
  * If you want to use it in your Xcode project, either place this code
  * in the Xcode-generated bridging header, or set this file as the
