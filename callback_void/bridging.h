@@ -1,4 +1,3 @@
-//
 //  bridging.h
 //  callback_void
 //
